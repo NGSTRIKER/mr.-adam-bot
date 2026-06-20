@@ -1,39 +1,100 @@
 import discord
 import time
 
-from database import get_goon_xp, add_goon_xp
+from database import (
+    get_path_xp,
+    add_path_xp,
+    get_all_path_xp
+)
 
-# CONFIG
+# PATH CONFIG
+# Add role IDs and channel IDs yourself
 
-GOON_PATH_ROLE_ID = 1405631400551645194
+PATHS = {
+    "goon": {
+        "display_name": "Goon Path",
+        "role_id": 1405631400551645194,
+        "channels": [
+            1405074443549671506,
+            1517114760947040286,
+            1517114810104414308
+        ]
+    },
 
-GOON_CHANNEL_IDS = [
-    1405074443549671506,
-    1517114760947040286
-]
+    "gaming": {
+        "display_name": "Game Path",
+        "role_id": 1405630919594872872,
+        "channels": [1403715740196147280]
+    },
+
+    "debate": {
+        "display_name": "Debate Path",
+        "role_id": 1517871971981987921,
+        "channels": []
+    },
+
+    "novel": {
+        "display_name": "Novel Path",
+        "role_id": 1517872875967877312,
+        "channels": [1411764479833800865]
+    },
+
+    "painting": {
+        "display_name": "Painting Path",
+        "role_id": 1402567281007136768,
+        "channels": [1403708113495789618]
+    },
+
+    "space": {
+        "display_name": "Space Path",
+        "role_id": 1402567337944551545,
+        "channels": [1402557419845845012]
+    },
+
+    "human": {
+        "display_name": "Human Path",
+        "role_id": 1405631544697294953,
+        "channels": []
+    }
+}
+
+# RANK CONFIG
 
 ATTAINMENT_RANKS = [
-    ("Quasi Master", 100),
-    ("Master", 2500),
-    ("Quasi Grandmaster", 6000),
-    ("Grandmaster", 12000),
-    ("Quasi Great Grandmaster", 25000),
-    ("Great Grandmaster", 50000),
-    ("Quasi Supreme Grandmaster", 100000),
-    ("Supreme Grandmaster", 500000)
+    ("Quasi Master", 1075),
+    ("Master", 4025),
+    ("Quasi Grandmaster", 10100),
+    ("Grandmaster", 36635),
+    ("Quasi Great Grandmaster", 90650),
+    ("Great Grandmaster", 182175),
+    ("Quasi Supreme Grandmaster", 411650),
+    ("Supreme Grandmaster", 640675)
 ]
+
+# XP CONFIG
+
+NORMAL_MESSAGE_XP = 1
+LONG_MESSAGE_XP = 5
+
+LONG_MESSAGE_WORDS = 20
+
+XP_CAP_PER_MINUTE = 50
+
+# XP TRACKING
 
 # XP TRACKING
 
 user_xp_tracker = {}
+user_cooldowns = {}
 
-# RANK SYSTEM
+# RANK FUNCTIONS
 
 def get_rank(xp):
 
     rank = "Ordinary"
 
     for rank_name, requirement in ATTAINMENT_RANKS:
+
         if xp >= requirement:
             rank = rank_name
         else:
@@ -42,58 +103,74 @@ def get_rank(xp):
     return rank
 
 
-def get_progress(xp):
+def get_progress_data(xp):
 
     ranks = [("Ordinary", 0)] + ATTAINMENT_RANKS
 
     for i in range(len(ranks) - 1):
 
-        current_name, current_xp = ranks[i]
-        next_name, next_xp = ranks[i + 1]
+        current_rank, current_requirement = ranks[i]
+        next_rank, next_requirement = ranks[i + 1]
 
-        if xp < next_xp:
+        if xp < next_requirement:
 
-            progress = int(
-                ((xp - current_xp) / (next_xp - current_xp)) * 100
-            )
+            return {
+                "current_rank": current_rank,
+                "next_rank": next_rank,
+                "current_xp": xp,
+                "required_xp": next_requirement
+            }
 
-            return current_name, progress, next_name
+    return {
+        "current_rank": "Supreme Grandmaster",
+        "next_rank": "MAX",
+        "current_xp": xp,
+        "required_xp": xp
+    }
 
-    return "Supreme Grandmaster", 100, "MAX"
-
-
-# ROLE MANAGEMENT
+# ROLE CREATION
 
 async def create_attainment_roles(guild):
 
-    required_roles = [
-        f"Goon Path - {rank}"
-        for rank, _ in ATTAINMENT_RANKS
-    ]
+    for path_data in PATHS.values():
 
-    existing_roles = {
-        role.name
-        for role in guild.roles
-    }
+        path_name = path_data["display_name"]
 
-    for role_name in required_roles:
+        for rank_name, _ in ATTAINMENT_RANKS:
 
-        if role_name not in existing_roles:
+            role_name = f"{path_name} - {rank_name}"
 
-            await guild.create_role(
-                name=role_name,
-                reason="Automatic attainment role creation"
+            role_exists = discord.utils.get(
+                guild.roles,
+                name=role_name
             )
 
+            if not role_exists:
 
-async def update_attainment_role(member):
+                await guild.create_role(
+                    name=role_name,
+                    reason="Automatic attainment role creation"
+                )
 
-    xp = get_goon_xp(member.id)
+# ROLE UPDATES
+
+async def update_attainment_role(member, path_name):
+
+    path_data = PATHS[path_name]
+
+    xp = get_path_xp(
+        member.id,
+        path_name
+    )
 
     rank = get_rank(xp)
 
-    attainment_roles = {
-        f"Goon Path - {rank_name}"
+    path_display = path_data["display_name"]
+
+    path_attainment_roles = {
+
+        f"{path_display} - {rank_name}"
+
         for rank_name, _ in ATTAINMENT_RANKS
     }
 
@@ -101,97 +178,151 @@ async def update_attainment_role(member):
 
     for role in member.roles:
 
-        if role.name in attainment_roles:
+        if role.name in path_attainment_roles:
             roles_to_remove.append(role)
 
     if roles_to_remove:
-        await member.remove_roles(*roles_to_remove)
+
+        await member.remove_roles(
+            *roles_to_remove
+        )
 
     if rank == "Ordinary":
         return
 
     role = discord.utils.get(
         member.guild.roles,
-        name=f"Goon Path - {rank}"
+        name=f"{path_display} - {rank}"
     )
 
     if role:
-        await member.add_roles(role)
 
+        await member.add_roles(role)
 
 # XP PROCESSING
 
-async def process_goon_message(message):
+async def process_message(message):
 
     if message.author.bot:
         return
 
-    if message.channel.id not in GOON_CHANNEL_IDS:
-        return
-
-    if not any(
-        role.id == GOON_PATH_ROLE_ID
-        for role in message.author.roles
-    ):
-        return
-
-    if len(message.content.strip()) < 10:
-        return
-
     user_id = message.author.id
-    now = time.time()
+
+    current_time = time.time()
+    if user_id in user_cooldowns:
+
+        if current_time < user_cooldowns[user_id]:
+            return
+
+        del user_cooldowns[user_id]
 
     if user_id not in user_xp_tracker:
 
         user_xp_tracker[user_id] = {
-            "window_start": now,
+            "window_start": current_time,
             "xp_gained": 0
         }
 
     user_data = user_xp_tracker[user_id]
 
-    if now - user_data["window_start"] >= 60:
+    remaining_xp = XP_CAP_PER_MINUTE - user_data["xp_gained"]
 
-        user_data["window_start"] = now
+    if remaining_xp <= 0:
+        user_cooldowns[user_id] = current_time + 60
+
         user_data["xp_gained"] = 0
+
+        return
 
     words = len(message.content.split())
 
-    xp_to_give = 5 if words >= 20 else 1
+    xp_to_give = (
+        LONG_MESSAGE_XP
+        if words >= LONG_MESSAGE_WORDS
+        else NORMAL_MESSAGE_XP
+    )
 
-    remaining_xp = 50 - user_data["xp_gained"]
+    xp_to_give = min(
+        xp_to_give,
+        remaining_xp
+    )
 
-    if remaining_xp <= 0:
-        return
+    for path_name, path_data in PATHS.items():
 
-    xp_to_give = min(xp_to_give, remaining_xp)
+        if message.channel.id not in path_data["channels"]:
+            continue
 
-    add_goon_xp(
+        has_role = any(
+            role.id == path_data["role_id"]
+            for role in message.author.roles
+        )
+
+        if not has_role:
+            continue
+
+        add_path_xp(
+            user_id,
+            path_name,
+            xp_to_give
+        )
+
+        user_data["xp_gained"] += xp_to_give
+        if user_data["xp_gained"] >= XP_CAP_PER_MINUTE:
+            user_cooldowns[user_id] = current_time + 60
+
+            user_data["xp_gained"] = 0
+
+        await update_attainment_role(
+            message.author,
+            path_name
+        )
+
+        break
+
+# ATTAINMENT HELPER
+
+def get_attainment_data(user_id, path_name):
+
+    xp = get_path_xp(
         user_id,
-        xp_to_give
+        path_name
     )
-
-    user_data["xp_gained"] += xp_to_give
-
-    await update_attainment_role(
-        message.author
-    )
-
-
-# COMMAND HELPERS
-
-def get_attainment_data(user_id):
-
-    xp = get_goon_xp(user_id)
 
     rank = get_rank(xp)
 
-    current_rank, progress, next_rank = get_progress(xp)
+    progress = get_progress_data(xp)
 
     return {
-        "xp": xp,
+        "path": path_name,
         "rank": rank,
-        "current_rank": current_rank,
-        "progress": progress,
-        "next_rank": next_rank
+        "xp": xp,
+        "next_rank": progress["next_rank"],
+        "required_xp": progress["required_xp"]
     }
+
+# PROFILE HELPER
+
+def get_profile_data(user_id):
+
+    profile = []
+
+    all_xp = get_all_path_xp(user_id)
+
+    for path_name, xp in all_xp.items():
+
+        if xp <= 0:
+            continue
+
+        rank = get_rank(xp)
+
+        progress = get_progress_data(xp)
+
+        profile.append({
+            "path": path_name,
+            "rank": rank,
+            "xp": xp,
+            "required_xp": progress["required_xp"],
+            "next_rank": progress["next_rank"]
+        })
+
+    return profile

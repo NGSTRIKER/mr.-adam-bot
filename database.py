@@ -1,5 +1,6 @@
-
 import sqlite3
+
+# DATABASE CONNECTION
 
 conn = sqlite3.connect(
     "attainment.db",
@@ -8,47 +9,122 @@ conn = sqlite3.connect(
 
 cursor = conn.cursor()
 
+# TABLE SETUP
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS attainment (
     user_id INTEGER PRIMARY KEY,
-    goon_xp INTEGER DEFAULT 0
+
+    goon_xp INTEGER DEFAULT 0,
+    gaming_xp INTEGER DEFAULT 0,
+    debate_xp INTEGER DEFAULT 0,
+    novel_xp INTEGER DEFAULT 0,
+    painting_xp INTEGER DEFAULT 0,
+    space_xp INTEGER DEFAULT 0,
+    human_xp INTEGER DEFAULT 0
 )
 """)
 
 conn.commit()
 
+# USER SETUP
 
 def ensure_user(user_id):
 
     cursor.execute(
-        "INSERT OR IGNORE INTO attainment (user_id, goon_xp) VALUES (?, ?)",
-        (user_id, 0)
+        """
+        INSERT OR IGNORE INTO attainment (
+            user_id
+        )
+        VALUES (?)
+        """,
+        (user_id,)
     )
 
     conn.commit()
 
+# XP GETTERS
 
-def get_goon_xp(user_id):
+def get_path_xp(user_id, path):
 
     ensure_user(user_id)
 
     cursor.execute(
-        "SELECT goon_xp FROM attainment WHERE user_id = ?",
+        f"SELECT {path}_xp FROM attainment WHERE user_id = ?",
         (user_id,)
     )
 
     result = cursor.fetchone()
 
-    return result[0]
+    if result:
+        return result[0]
 
+    return 0
 
-def add_goon_xp(user_id, amount):
+# XP ADDERS
+
+def add_path_xp(user_id, path, amount):
 
     ensure_user(user_id)
 
     cursor.execute(
-        "UPDATE attainment SET goon_xp = goon_xp + ? WHERE user_id = ?",
+        f"""
+        UPDATE attainment
+        SET {path}_xp = {path}_xp + ?
+        WHERE user_id = ?
+        """,
         (amount, user_id)
     )
 
     conn.commit()
+
+# XP SETTERS
+
+def set_path_xp(user_id, path, amount):
+
+    ensure_user(user_id)
+
+    cursor.execute(
+        f"""
+        UPDATE attainment
+        SET {path}_xp = ?
+        WHERE user_id = ?
+        """,
+        (amount, user_id)
+    )
+
+    conn.commit()
+
+# PROFILE DATA
+
+def get_all_path_xp(user_id):
+
+    ensure_user(user_id)
+
+    cursor.execute(
+        """
+        SELECT
+            goon_xp,
+            gaming_xp,
+            debate_xp,
+            novel_xp,
+            painting_xp,
+            space_xp,
+            human_xp
+        FROM attainment
+        WHERE user_id = ?
+        """,
+        (user_id,)
+    )
+
+    result = cursor.fetchone()
+
+    return {
+        "goon": result[0],
+        "gaming": result[1],
+        "debate": result[2],
+        "novel": result[3],
+        "painting": result[4],
+        "space": result[5],
+        "human": result[6]
+    }

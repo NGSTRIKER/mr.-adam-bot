@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from attainment_system import *
-from attainment_system import get_attainment_data
+
 
 
 load_dotenv()
@@ -72,59 +72,73 @@ async def quests(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 @bot.tree.command(
     name="profile",
-    description="View a user's profile"
+    description="View a user's attainments"
 )
 async def profile(
     interaction: discord.Interaction,
     user: discord.Member = None
 ):
+    await interaction.response.defer()
 
     if user is None:
         user = interaction.user
 
-    data = get_attainment_data(user.id)
+    profile_data = get_profile_data(user.id)
 
     embed = discord.Embed(
         title=f"{user.display_name}'s Profile",
         color=discord.Color.blue()
     )
 
-    embed.add_field(
-        name="Highest Attainment",
-        value=data["rank"],
-        inline=False
-    )
+    if not profile_data:
 
-    embed.add_field(
-        name="Progress",
-        value=f"{data['progress']}%",
-        inline=True
-    )
+        embed.description = "No attainments yet."
 
-    embed.add_field(
-        name="Next Rank",
-        value=data["next_rank"],
-        inline=True
-    )
+    else:
 
-    await interaction.response.send_message(
+        for path in profile_data:
+
+            embed.add_field(
+                name=f"{path['path'].title()} Path",
+                value=(
+                    f"Rank: {path['rank']}\n"
+                    f"XP: {path['xp']} / {path['required_xp']}\n"
+                    f"Next: {path['next_rank']}"
+                ),
+                inline=False
+            )
+
+    await interaction.followup.send(
         embed=embed
     )
 
-
 @bot.tree.command(
     name="attainment",
-    description="View Goon Path attainment"
+    description="View attainment in a specific path"
 )
 async def attainment(
     interaction: discord.Interaction,
+    path: str,
     user: discord.Member
 ):
 
-    data = get_attainment_data(user.id)
+    path = path.lower()
+
+    if path not in PATHS:
+
+        await interaction.response.send_message(
+            "Invalid path.",
+            ephemeral=True
+        )
+        return
+
+    data = get_attainment_data(
+        user.id,
+        path
+    )
 
     embed = discord.Embed(
-        title="🍑 Goon Path Attainment",
+        title=f"{PATHS[path]['display_name']} Attainment",
         color=discord.Color.purple()
     )
 
@@ -141,8 +155,8 @@ async def attainment(
     )
 
     embed.add_field(
-        name="Progress",
-        value=f"{data['progress']}%",
+        name="XP",
+        value=f"{data['xp']} / {data['required_xp']}",
         inline=True
     )
 
@@ -155,10 +169,10 @@ async def attainment(
     await interaction.response.send_message(
         embed=embed
     )
+
 @bot.event
 async def on_message(message):
-
-    await process_goon_message(message)
+    await process_message(message)
 
     await bot.process_commands(message)
 
