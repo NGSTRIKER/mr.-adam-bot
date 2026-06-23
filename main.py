@@ -59,7 +59,7 @@ async def quests(interaction: discord.Interaction):
         ),
         inline=False
     )
-
+#if ur seeing this comments then kys
     embed.add_field(
         name="Limited quests",
         value=(
@@ -175,5 +175,37 @@ async def on_message(message):
     await process_message(message)
 
     await bot.process_commands(message)
+@bot.tree.command(
+    name="boosters",
+    description="View all current boosters"
+)
+async def boosters(interaction: discord.Interaction):
 
+    boosters = []
+
+    for member in interaction.guild.members:
+
+        if member.premium_since:
+
+            boosters.append(member)
+
+    embed = discord.Embed(
+        title="🚀 Server Boosters",
+        color=discord.Color.purple()
+    )
+
+    if not boosters:
+
+        embed.description = "No active boosters."
+
+    else:
+
+        embed.description = "\n".join(
+            member.mention
+            for member in boosters
+        )
+
+    await interaction.response.send_message(
+        embed=embed
+    )
 bot.run(TOKEN)
