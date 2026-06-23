@@ -39,23 +39,11 @@ PATHS = {
         "channels": [1411764479833800865]
     },
 
-    "painting": {
-        "display_name": "Painting Path",
-        "role_id": 1402567281007136768,
-        "channels": [1403708113495789618]
-    },
 
-    "space": {
-        "display_name": "Space Path",
-        "role_id": 1402567337944551545,
-        "channels": [1402557419845845012]
-    },
 
-    "human": {
-        "display_name": "Human Path",
-        "role_id": 1405631544697294953,
-        "channels": []
-    }
+
+
+
 }
 
 # RANK CONFIG

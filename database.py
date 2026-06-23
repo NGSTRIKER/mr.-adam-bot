@@ -18,10 +18,10 @@ CREATE TABLE IF NOT EXISTS attainment (
     goon_xp INTEGER DEFAULT 0,
     gaming_xp INTEGER DEFAULT 0,
     debate_xp INTEGER DEFAULT 0,
-    novel_xp INTEGER DEFAULT 0,
-    painting_xp INTEGER DEFAULT 0,
-    space_xp INTEGER DEFAULT 0,
-    human_xp INTEGER DEFAULT 0
+    novel_xp INTEGER DEFAULT 0
+    
+    
+    
 )
 """)
 
@@ -108,9 +108,7 @@ def get_all_path_xp(user_id):
             gaming_xp,
             debate_xp,
             novel_xp,
-            painting_xp,
-            space_xp,
-            human_xp
+            
         FROM attainment
         WHERE user_id = ?
         """,
@@ -123,8 +121,8 @@ def get_all_path_xp(user_id):
         "goon": result[0],
         "gaming": result[1],
         "debate": result[2],
-        "novel": result[3],
-        "painting": result[4],
-        "space": result[5],
-        "human": result[6]
+        "novel": result[3]
+
+
+
     }
