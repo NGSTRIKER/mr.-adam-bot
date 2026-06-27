@@ -138,3 +138,23 @@ def get_all_path_xp(user_id):
         "novel": result[3]
 
     }
+
+
+
+# LEADERBOARD DATA
+
+def get_path_leaderboard(path, limit=10):
+
+    cursor.execute(
+        f"""
+        SELECT
+            user_id,
+            {path}_xp
+        FROM attainment
+        ORDER BY {path}_xp DESC
+        LIMIT ?
+        """,
+        (limit,)
+    )
+
+    return cursor.fetchall()

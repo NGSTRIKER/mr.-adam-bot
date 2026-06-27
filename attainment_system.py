@@ -405,5 +405,5 @@ def get_profile_data(user_id):
             "required_xp": progress["required_xp"],
             "next_rank": progress["next_rank"]
         })
-
+#27-6-2026
     return profile

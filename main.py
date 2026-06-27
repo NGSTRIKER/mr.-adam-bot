@@ -8,7 +8,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 from attainment_system import *
-
+from database import get_path_leaderboard
 
 
 load_dotenv()
@@ -177,5 +177,63 @@ async def on_message(message):
     await process_message(message)
 
     await bot.process_commands(message)
+@bot.tree.command(
+    name="leaderboard",
+    description="View path leaderboard"
+)
+async def leaderboard(
+    interaction: discord.Interaction,
+    path: str
+):
 
+    path = path.lower()
+
+    if path not in PATHS:
+
+        await interaction.response.send_message(
+            "Invalid path.",
+            ephemeral=True
+        )
+        return
+
+    leaderboard_data = get_path_leaderboard(
+        path,
+        10
+    )
+
+    embed = discord.Embed(
+        title=f"🏆 {PATHS[path]['display_name']} Leaderboard",
+        color=discord.Color.gold()
+    )
+
+    if not leaderboard_data:
+
+        embed.description = "No data found."
+
+    else:
+
+        description = ""
+
+        for position, (user_id, xp) in enumerate(
+            leaderboard_data,
+            start=1
+        ):
+
+            user = bot.get_user(user_id)
+
+            if user:
+                username = user.display_name
+            else:
+                username = f"User {user_id}"
+
+            description += (
+                f"**#{position}** "
+                f"{username} — {xp:,} XP\n"
+            )
+
+        embed.description = description
+
+    await interaction.response.send_message(
+        embed=embed
+    )
 bot.run(TOKEN)
