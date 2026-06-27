@@ -8,7 +8,61 @@ from database import (
 )
 
 # PATH CONFIG
-# Add role IDs and channel IDs yourself
+# XP BOOST ROLES
+
+PATH_XP_BOOSTS = {
+
+    "goon": {
+        "10": 1520099827856441424,
+        "30": 1520099987831263483,
+        "50": 1520100103199654152
+    },
+
+    "gaming": {
+        "10": 1520324239499202560,
+        "30": 1520324305936973854,
+        "50": 1520324351025610793
+    },
+
+    "debate": {
+        "10": 1520321568327209101,
+        "30": 1520321734211797052,
+        "50": 1520321834598404096
+    },
+
+    "novel": {
+        "10": 1520313692476932118,
+        "30": 1520313989907611770,
+        "50": 1520314371895464036
+    }
+
+}
+# XP BOOST CALCULATION
+
+def get_path_xp_boost(member, path_name):
+
+    multiplier = 1.0
+
+    if path_name not in PATH_XP_BOOSTS:
+        return multiplier
+
+    boosts = PATH_XP_BOOSTS[path_name]
+
+    member_role_ids = {
+        role.id
+        for role in member.roles
+    }
+
+    if boosts["50"] in member_role_ids:
+        return 1.50
+
+    if boosts["30"] in member_role_ids:
+        return 1.30
+
+    if boosts["10"] in member_role_ids:
+        return 1.10
+
+    return 1.0
 
 PATHS = {
     "goon": {
@@ -184,6 +238,8 @@ async def process_message(message):
     if message.author.bot:
         return
 
+
+
     user_id = message.author.id
     current_time = time.time()
 
@@ -248,12 +304,23 @@ async def process_message(message):
 
     # XP calculation
 
+    # XP calculation
+
     words = len(message.content.split())
 
     xp_to_give = (
         LONG_MESSAGE_XP
         if words >= LONG_MESSAGE_WORDS
         else NORMAL_MESSAGE_XP
+    )
+
+    multiplier = get_path_xp_boost(
+        message.author,
+        active_path
+    )
+
+    xp_to_give = round(
+        xp_to_give * multiplier
     )
 
     xp_to_give = min(
