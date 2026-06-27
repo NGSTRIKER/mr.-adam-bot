@@ -169,27 +169,28 @@ async def attainment(
     await interaction.response.send_message(
         embed=embed
     )
+
+
 # MESSAGE XP HANDLER
 
 @bot.event
 async def on_message(message):
-
     await process_message(message)
 
     await bot.process_commands(message)
+
+
 @bot.tree.command(
     name="leaderboard",
     description="View path leaderboard"
 )
 async def leaderboard(
-    interaction: discord.Interaction,
-    path: str
+        interaction: discord.Interaction,
+        path: str
 ):
-
     path = path.lower()
 
     if path not in PATHS:
-
         await interaction.response.send_message(
             "Invalid path.",
             ephemeral=True
@@ -215,16 +216,23 @@ async def leaderboard(
         description = ""
 
         for position, (user_id, xp) in enumerate(
-            leaderboard_data,
-            start=1
+                leaderboard_data,
+                start=1
         ):
 
-            user = bot.get_user(user_id)
+            member = interaction.guild.get_member(user_id)
 
-            if user:
-                username = user.display_name
+            if member is None:
+
+                try:
+                    member = await interaction.guild.fetch_member(user_id)
+                except:
+                    member = None
+
+            if member:
+                username = member.display_name
             else:
-                username = f"User {user_id}"
+                username = f"Unknown User"
 
             description += (
                 f"**#{position}** "
