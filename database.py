@@ -12,28 +12,43 @@ cursor = conn.cursor()
 # TABLE SETUP
 
 cursor.execute("""
-CREATE TABLE IF NOT EXISTS attainment (
-    user_id INTEGER PRIMARY KEY,
+               CREATE TABLE IF NOT EXISTS attainment
+               (
+                   user_id
+                   INTEGER
+                   PRIMARY
+                   KEY,
 
-    goon_xp INTEGER DEFAULT 0,
-    gaming_xp INTEGER DEFAULT 0,
-    debate_xp INTEGER DEFAULT 0,
-    novel_xp INTEGER DEFAULT 0
-    
-    
-    
-)
-""")
+                   goon_xp
+                   INTEGER
+                   DEFAULT
+                   0,
+                   gaming_xp
+                   INTEGER
+                   DEFAULT
+                   0,
+                   debate_xp
+                   INTEGER
+                   DEFAULT
+                   0,
+                   novel_xp
+                   INTEGER
+                   DEFAULT
+                   0
+
+               )
+               """)
 
 conn.commit()
+
 
 # USER SETUP
 
 def ensure_user(user_id):
-
     cursor.execute(
         """
-        INSERT OR IGNORE INTO attainment (
+        INSERT
+        OR IGNORE INTO attainment (
             user_id
         )
         VALUES (?)
@@ -43,10 +58,10 @@ def ensure_user(user_id):
 
     conn.commit()
 
+
 # XP GETTERS
 
 def get_path_xp(user_id, path):
-
     ensure_user(user_id)
 
     cursor.execute(
@@ -61,10 +76,10 @@ def get_path_xp(user_id, path):
 
     return 0
 
+
 # XP ADDERS
 
 def add_path_xp(user_id, path, amount):
-
     ensure_user(user_id)
 
     cursor.execute(
@@ -78,10 +93,10 @@ def add_path_xp(user_id, path, amount):
 
     conn.commit()
 
+
 # XP SETTERS
 
 def set_path_xp(user_id, path, amount):
-
     ensure_user(user_id)
 
     cursor.execute(
@@ -95,20 +110,19 @@ def set_path_xp(user_id, path, amount):
 
     conn.commit()
 
+
 # PROFILE DATA
 
 def get_all_path_xp(user_id):
-
     ensure_user(user_id)
 
     cursor.execute(
         """
-        SELECT
-            goon_xp,
-            gaming_xp,
-            debate_xp,
-            novel_xp,
-            
+        SELECT goon_xp,
+               gaming_xp,
+               debate_xp,
+               novel_xp
+
         FROM attainment
         WHERE user_id = ?
         """,
@@ -122,7 +136,5 @@ def get_all_path_xp(user_id):
         "gaming": result[1],
         "debate": result[2],
         "novel": result[3]
-
-
 
     }

@@ -29,20 +29,15 @@ PATHS = {
 
     "debate": {
         "display_name": "Debate Path",
-        "role_id": 1517871971981987921,
-        "channels": []
+        "role_id": 1520087106884468746,
+        "channels": [1513071416512090212]
     },
 
     "novel": {
         "display_name": "Novel Path",
-        "role_id": 1517872875967877312,
+        "role_id": 1520087182864289792,
         "channels": [1411764479833800865]
-    },
-
-
-
-
-
+    }
 
 }
 
@@ -75,10 +70,10 @@ XP_CAP_PER_MINUTE = 50
 user_xp_tracker = {}
 user_cooldowns = {}
 
+
 # RANK FUNCTIONS
 
 def get_rank(xp):
-
     rank = "Ordinary"
 
     for rank_name, requirement in ATTAINMENT_RANKS:
@@ -92,7 +87,6 @@ def get_rank(xp):
 
 
 def get_progress_data(xp):
-
     ranks = [("Ordinary", 0)] + ATTAINMENT_RANKS
 
     for i in range(len(ranks) - 1):
@@ -101,7 +95,6 @@ def get_progress_data(xp):
         next_rank, next_requirement = ranks[i + 1]
 
         if xp < next_requirement:
-
             return {
                 "current_rank": current_rank,
                 "next_rank": next_rank,
@@ -116,10 +109,10 @@ def get_progress_data(xp):
         "required_xp": xp
     }
 
+
 # ROLE CREATION
 
 async def create_attainment_roles(guild):
-
     for path_data in PATHS.values():
 
         path_name = path_data["display_name"]
@@ -134,16 +127,15 @@ async def create_attainment_roles(guild):
             )
 
             if not role_exists:
-
                 await guild.create_role(
                     name=role_name,
                     reason="Automatic attainment role creation"
                 )
 
+
 # ROLE UPDATES
 
 async def update_attainment_role(member, path_name):
-
     path_data = PATHS[path_name]
 
     xp = get_path_xp(
@@ -170,7 +162,6 @@ async def update_attainment_role(member, path_name):
             roles_to_remove.append(role)
 
     if roles_to_remove:
-
         await member.remove_roles(
             *roles_to_remove
         )
@@ -184,43 +175,78 @@ async def update_attainment_role(member, path_name):
     )
 
     if role:
-
         await member.add_roles(role)
+
 
 # XP PROCESSING
 
 async def process_message(message):
-
     if message.author.bot:
         return
 
     user_id = message.author.id
-
     current_time = time.time()
-    if user_id in user_cooldowns:
 
-        if current_time < user_cooldowns[user_id]:
+    # Find matching path
+
+    active_path = None
+
+    for path_name, path_data in PATHS.items():
+
+        if message.channel.id in path_data["channels"]:
+            active_path = path_name
+            break
+
+    if active_path is None:
+        return
+
+    path_key = (
+        user_id,
+        active_path
+    )
+
+    # Path cooldown check
+
+    if path_key in user_cooldowns:
+
+        if current_time < user_cooldowns[path_key]:
             return
 
-        del user_cooldowns[user_id]
+        del user_cooldowns[path_key]
 
-    if user_id not in user_xp_tracker:
+    # Path tracker setup
 
-        user_xp_tracker[user_id] = {
-            "window_start": current_time,
+    if path_key not in user_xp_tracker:
+        user_xp_tracker[path_key] = {
             "xp_gained": 0
         }
 
-    user_data = user_xp_tracker[user_id]
+    user_data = user_xp_tracker[path_key]
+
+    # XP cap check
 
     remaining_xp = XP_CAP_PER_MINUTE - user_data["xp_gained"]
 
     if remaining_xp <= 0:
-        user_cooldowns[user_id] = current_time + 60
+        user_cooldowns[path_key] = current_time + 60
 
         user_data["xp_gained"] = 0
 
         return
+
+    # Role check
+
+    path_data = PATHS[active_path]
+
+    has_role = any(
+        role.id == path_data["role_id"]
+        for role in message.author.roles
+    )
+
+    if not has_role:
+        return
+
+    # XP calculation
 
     words = len(message.content.split())
 
@@ -234,43 +260,43 @@ async def process_message(message):
         xp_to_give,
         remaining_xp
     )
+    print("==========")
+    print(f"ACTIVE PATH: {active_path}")
+    print(f"USER: {message.author}")
+    print(f"XP: {xp_to_give}")
+    print(f"ROLES: {[r.id for r in message.author.roles]}")
+    print(f"EXPECTED ROLE: {path_data['role_id']}")
+    print(f"HAS ROLE: {has_role}")
+    print("==========")
 
-    for path_name, path_data in PATHS.items():
+    # Give XP
 
-        if message.channel.id not in path_data["channels"]:
-            continue
+    add_path_xp(
+        user_id,
+        active_path,
+        xp_to_give
+    )
 
-        has_role = any(
-            role.id == path_data["role_id"]
-            for role in message.author.roles
-        )
+    user_data["xp_gained"] += xp_to_give
 
-        if not has_role:
-            continue
+    # Activate cooldown after cap reached
 
-        add_path_xp(
-            user_id,
-            path_name,
-            xp_to_give
-        )
+    if user_data["xp_gained"] >= XP_CAP_PER_MINUTE:
+        user_cooldowns[path_key] = current_time + 60
 
-        user_data["xp_gained"] += xp_to_give
-        if user_data["xp_gained"] >= XP_CAP_PER_MINUTE:
-            user_cooldowns[user_id] = current_time + 60
+        user_data["xp_gained"] = 0
 
-            user_data["xp_gained"] = 0
+    # Update attainment role
 
-        await update_attainment_role(
-            message.author,
-            path_name
-        )
+    await update_attainment_role(
+        message.author,
+        active_path
+    )
 
-        break
 
 # ATTAINMENT HELPER
 
 def get_attainment_data(user_id, path_name):
-
     xp = get_path_xp(
         user_id,
         path_name
@@ -288,10 +314,10 @@ def get_attainment_data(user_id, path_name):
         "required_xp": progress["required_xp"]
     }
 
+
 # PROFILE HELPER
 
 def get_profile_data(user_id):
-
     profile = []
 
     all_xp = get_all_path_xp(user_id)
