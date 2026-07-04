@@ -1,6 +1,5 @@
 import discord
 import time
-
 from database import (
     get_path_xp,
     add_path_xp,
@@ -35,8 +34,8 @@ PATH_XP_BOOSTS = {
         "30": 1520313989907611770,
         "50": 1520314371895464036
     }
-
 }
+
 # XP BOOST CALCULATION
 
 def get_path_xp_boost(member, path_name):
@@ -92,7 +91,6 @@ PATHS = {
         "role_id": 1520087182864289792,
         "channels": [1411764479833800865]
     }
-
 }
 
 # RANK CONFIG
@@ -119,11 +117,8 @@ XP_CAP_PER_MINUTE = 50
 
 # XP TRACKING
 
-# XP TRACKING
-
 user_xp_tracker = {}
 user_cooldowns = {}
-
 
 # RANK FUNCTIONS
 
@@ -304,8 +299,6 @@ async def process_message(message):
 
     # XP calculation
 
-    # XP calculation
-
     words = len(message.content.split())
 
     xp_to_give = (
@@ -327,6 +320,7 @@ async def process_message(message):
         xp_to_give,
         remaining_xp
     )
+
     print("==========")
     print(f"ACTIVE PATH: {active_path}")
     print(f"USER: {message.author}")
@@ -360,8 +354,51 @@ async def process_message(message):
         active_path
     )
 
+    # Send XP completion messages and countdown for milestones
+    check_xp_milestones(message)
 
-# ATTAINMENT HELPER
+async def check_xp_milestones(message):
+    user_id = message.author.id
+    active_path = None
+
+    for path_name, path_data in PATHS.items():
+        if message.channel.id in path_data["channels"]:
+            active_path = path_name
+            break
+
+    if not active_path:
+        return
+
+    xp = get_path_xp(
+        user_id,
+        active_path
+    )
+
+    rank = get_rank(xp)
+
+    progress = get_progress_data(xp)
+
+    # Check XP milestone completion
+    for requirement in ATTAINMENT_RANKS[ATTAINMENT_RANKS.index(rank):]:
+        if xp >= requirement[1]:
+            await message.channel.send(
+                f"{message.author.mention} has reached the next rank: {requirement[0]}!"
+            )
+
+    # Calculate and send countdown for next XP milestone
+    next_rank = progress["next_rank"]
+    remaining_xp_to_next_milestone = progress["required_xp"] - xp
+
+    if remaining_xp_to_next_milestone > 0:
+        minutes, seconds = divmod(remaining_xp_to_next_milestone / NORMAL_MESSAGE_XP, 60)
+        countdown_message = (
+            f"{message.author.mention}, you have {minutes} minute(s) and {seconds} second(s)"
+            " until reaching the next XP milestone of {next_rank}."
+        )
+        await message.channel.send(countdown_message)
+
+
+# PROFILE HELPER
 
 def get_attainment_data(user_id, path_name):
     xp = get_path_xp(
@@ -405,5 +442,4 @@ def get_profile_data(user_id):
             "required_xp": progress["required_xp"],
             "next_rank": progress["next_rank"]
         })
-#27-6-2026
     return profile
