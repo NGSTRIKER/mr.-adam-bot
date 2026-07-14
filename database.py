@@ -158,3 +158,68 @@ def get_path_leaderboard(path, limit=10):
     )
 
     return cursor.fetchall()
+
+# REACTION ROLE STORAGE
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS reaction_roles (
+
+    message_id INTEGER,
+    emoji TEXT,
+    role_id INTEGER,
+
+    PRIMARY KEY (
+        message_id,
+        emoji
+    )
+
+)
+""")
+
+conn.commit()
+
+
+# REACTION ROLE ADD
+
+def add_reaction_role(
+    message_id,
+    emoji,
+    role_id
+):
+
+    cursor.execute(
+        """
+        INSERT OR REPLACE INTO reaction_roles
+        VALUES (?, ?, ?)
+        """,
+        (
+            message_id,
+            emoji,
+            role_id
+        )
+    )
+
+    conn.commit()
+
+
+# REACTION ROLE GET
+
+def get_reaction_role(
+    message_id,
+    emoji
+):
+
+    cursor.execute(
+        """
+        SELECT role_id
+        FROM reaction_roles
+        WHERE message_id = ?
+        AND emoji = ?
+        """,
+        (
+            message_id,
+            emoji
+        )
+    )
+
+    return cursor.fetchone()
